@@ -1,0 +1,13 @@
+{
+  "name": "@mohayonao/launch-control",
+  "description": "utility for novation LAUNCH CONTROL",
+  "version": "0.0.0",
+  "author": "Nao Yonamine <mohayonao@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/mohayonao/launch-control/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohayonao/launch-control.git"
+  }
+}
