@@ -6,8 +6,44 @@
   "bugs": {
     "url": "https://github.com/mohayonao/launch-control/issues"
   },
+  "dependencies": {
+    "midi": "^0.9.3"
+  },
+  "devDependencies": {
+    "babel": "^5.5.8",
+    "babel-eslint": "^3.1.17",
+    "browserify": "^10.2.4",
+    "eslint": "^0.23.0",
+    "espower-babel": "^3.2.0",
+    "isparta": "^3.0.3",
+    "mocha": "^2.2.5",
+    "power-assert": "^0.11.0"
+  },
+  "files": [
+    "package.json",
+    "README.md",
+    "index.js",
+    "webmidi.js",
+    "lib"
+  ],
+  "homepage": "https://github.com/mohayonao/launch-control/",
+  "keywords": [
+    "midi"
+  ],
+  "licenses": "MIT",
+  "main": "./index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/mohayonao/launch-control.git"
+  },
+  "scripts": {
+    "build": "npm run build-to5 && npm run build-browser",
+    "build-browser": "browserify ./webmidi.js --standalone LaunchControl --outfile build/launch-control.js",
+    "build-to5": "babel src --out-dir lib",
+    "cover": "babel-node $(npm bin)/isparta cover --report text --report html --report lcov _mocha",
+    "lint": "eslint src test",
+    "prepublish": "rm -rf lib && npm run lint && npm run test && npm run build-to5",
+    "test": "mocha --compilers js:espower-babel/guess",
+    "travis": "npm run lint && npm run cover"
   }
 }
