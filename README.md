@@ -32,7 +32,7 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
 #### Events
 
 - `message: object`
-  - `control: string` "pad", "knob1" or "knob2"
+  - `control: string` "knob1", "knob2" or "pad"
   - `track: number` 1 - 8
   - `value: number` 0 - 127
   - `channel: number` 1 - 8
