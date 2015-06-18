@@ -17,7 +17,7 @@ npm install @mohayonao/launch-control
 
 Browser
 
-- [launch-control.js](mohayonao.github.io/launch-control/build/launch-control.js)
+- [launch-control.js](http://mohayonao.github.io/launch-control/build/launch-control.js)
 
 ## API
 ### LaunchControl
