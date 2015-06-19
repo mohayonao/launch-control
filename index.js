@@ -1,1 +1,1 @@
-module.exports = require("./lib/node-midi-interface");
+module.exports = require("./lib/NodeMIDILaunchControl");

@@ -1,1 +1,1 @@
-module.exports = require("./lib/web-midi-interface");
+module.exports = require("./lib/WebMIDILaunchControl");

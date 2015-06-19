@@ -4,11 +4,100 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+
+var _xtend = require("xtend");
+
+var _xtend2 = _interopRequireDefault(_xtend);
+
+function parseMessage(b0, b1, b2) {
+  var value = Math.max(0, Math.min(b2, 127));
+  var channel = Math.max(1, Math.min((b0 & 15) - 7, 16));
+
+  switch (b0 & 240) {
+    case 144:
+      // note on
+      if (9 <= b1 && b1 <= 12 && value === 127) {
+        return { control: "pad", track: b1 - 8, value: value, channel: channel };
+      }
+      if (25 <= b1 && b1 <= 28) {
+        return { control: "pad", track: b1 - 20, value: value, channel: channel };
+      }
+      break;
+    case 176:
+      // control change
+      if (21 <= b1 && b1 <= 28) {
+        return { control: "knob1", track: b1 - 20, value: value, channel: channel };
+      }
+      if (41 <= b1 && b1 <= 48) {
+        return { control: "knob2", track: b1 - 40, value: value, channel: channel };
+      }
+      break;
+  }
+
+  return null;
+}
+
+function _extends(MIDIDevice) {
+  return (function (_MIDIDevice) {
+    function LaunchControl() {
+      var _this = this;
+
+      var deviceName = arguments[0] === undefined ? "Launch Control" : arguments[0];
+
+      _classCallCheck(this, LaunchControl);
+
+      _get(Object.getPrototypeOf(LaunchControl.prototype), "constructor", this).call(this, deviceName);
+
+      this._onmidimessage = function (e) {
+        var msg = parseMessage(e.data[0], e.data[1], e.data[2]);
+
+        if (msg === null) {
+          return;
+        }
+
+        _this.emit("message", (0, _xtend2["default"])({ type: "message" }, msg));
+      };
+    }
+
+    _inherits(LaunchControl, _MIDIDevice);
+
+    return LaunchControl;
+  })(MIDIDevice);
+}
+
 exports["default"] = {
-  DEVICE_NAME: "Launch Control"
+  "extends": _extends,
+  parseMessage: parseMessage
 };
 module.exports = exports["default"];
-},{}],2:[function(require,module,exports){
+},{"xtend":8}],2:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+var _mohayonaoMidiDeviceWebmidi = require("@mohayonao/midi-device/webmidi");
+
+var _mohayonaoMidiDeviceWebmidi2 = _interopRequireDefault(_mohayonaoMidiDeviceWebmidi);
+
+var _LaunchControl = require("./LaunchControl");
+
+var _LaunchControl2 = _interopRequireDefault(_LaunchControl);
+
+exports["default"] = _LaunchControl2["default"]["extends"](_mohayonaoMidiDeviceWebmidi2["default"]);
+module.exports = exports["default"];
+},{"./LaunchControl":1,"@mohayonao/midi-device/webmidi":6}],3:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19,44 +108,7 @@ var _events = require("events");
 
 exports["default"] = _events.EventEmitter;
 module.exports = exports["default"];
-},{"events":5}],3:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = {
-  parse: function parse(b0, b1, b2) {
-    var value = Math.max(0, Math.min(b2, 127));
-    var channel = Math.max(1, Math.min((b0 & 15) - 7, 16));
-
-    switch (b0 & 240) {
-      case 144:
-        // note on
-        if (9 <= b1 && b1 <= 12 && value === 127) {
-          return { control: "pad", track: b1 - 8, value: value, channel: channel };
-        }
-        if (25 <= b1 && b1 <= 28) {
-          return { control: "pad", track: b1 - 20, value: value, channel: channel };
-        }
-        break;
-      case 176:
-        // control change
-        if (21 <= b1 && b1 <= 28) {
-          return { control: "knob1", track: b1 - 20, value: value, channel: channel };
-        }
-        if (41 <= b1 && b1 <= 48) {
-          return { control: "knob2", track: b1 - 40, value: value, channel: channel };
-        }
-        break;
-    }
-
-    return null;
-  }
-};
-module.exports = exports["default"];
-},{}],4:[function(require,module,exports){
-(function (global){
+},{"events":7}],4:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -65,7 +117,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -77,13 +129,62 @@ var _EventEmitter2 = require("./EventEmitter");
 
 var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
 
-var _Constants = require("./Constants");
+var MIDIDevice = (function (_EventEmitter) {
+  function MIDIDevice(deviceName) {
+    _classCallCheck(this, MIDIDevice);
 
-var _Constants2 = _interopRequireDefault(_Constants);
+    _get(Object.getPrototypeOf(MIDIDevice.prototype), "constructor", this).call(this);
 
-var _Parser = require("./Parser");
+    this._input = null;
+    this._deviceName = deviceName;
+  }
 
-var _Parser2 = _interopRequireDefault(_Parser);
+  _inherits(MIDIDevice, _EventEmitter);
+
+  _createClass(MIDIDevice, [{
+    key: "open",
+    value: function open() {
+      return Promise.reject(new Error("subclass responsibility"));
+    }
+  }, {
+    key: "close",
+    value: function close() {
+      return Promise.reject(new Error("subclass responsibility"));
+    }
+  }, {
+    key: "_onmidimessage",
+    value: function _onmidimessage() {}
+  }, {
+    key: "deviceName",
+    get: function () {
+      return this._deviceName;
+    }
+  }]);
+
+  return MIDIDevice;
+})(_EventEmitter3["default"]);
+
+exports["default"] = MIDIDevice;
+module.exports = exports["default"];
+},{"./EventEmitter":3}],5:[function(require,module,exports){
+(function (global){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+
+var _MIDIDevice2 = require("./MIDIDevice");
+
+var _MIDIDevice3 = _interopRequireDefault(_MIDIDevice2);
 
 function findMIDIPortByName(iter, deviceName) {
   for (var x = iter.next(); !x.done; x = iter.next()) {
@@ -95,54 +196,42 @@ function findMIDIPortByName(iter, deviceName) {
   return null;
 }
 
-var LaunchControl = (function (_EventEmitter) {
-  function LaunchControl() {
-    var deviceName = arguments[0] === undefined ? _Constants2["default"].DEVICE_NAME : arguments[0];
+var WebMIDIDevice = (function (_MIDIDevice) {
+  function WebMIDIDevice() {
+    _classCallCheck(this, WebMIDIDevice);
 
-    _classCallCheck(this, LaunchControl);
-
-    _get(Object.getPrototypeOf(LaunchControl.prototype), "constructor", this).call(this);
-
-    this._input = null;
-    this._deviceName = deviceName;
+    if (_MIDIDevice != null) {
+      _MIDIDevice.apply(this, arguments);
+    }
   }
 
-  _inherits(LaunchControl, _EventEmitter);
+  _inherits(WebMIDIDevice, _MIDIDevice);
 
-  _createClass(LaunchControl, [{
+  _createClass(WebMIDIDevice, [{
     key: "open",
     value: function open() {
       var _this = this;
 
       return new Promise(function (resolve, reject) {
-        if (!global.navigator && typeof global.navigator.requestMIDIAccess !== "function") {
+        if (!global.navigator || typeof global.navigator.requestMIDIAccess !== "function") {
           return reject(new TypeError("Web MIDI API is not supported"));
         }
 
         if (_this._input !== null) {
-          return resolve(_this._input);
+          return reject(new TypeError("" + _this.deviceName + " has already been opened"));
         }
 
         var successCallback = function successCallback(m) {
-          var input = findMIDIPortByName(m.inputs.values(), _this._deviceName);
+          var input = findMIDIPortByName(m.inputs.values(), _this.deviceName);
 
           if (input === null) {
-            return reject(new TypeError("Launch Control is not found"));
+            return reject(new TypeError("" + _this.deviceName + " is not found"));
           }
 
           _this._input = input;
 
           input.onmidimessage = function (e) {
-            var payload = _Parser2["default"].parse(e.data[0], e.data[1], e.data[2]);
-            if (payload) {
-              _this.emit("message", {
-                type: "message",
-                control: payload.control,
-                track: payload.track,
-                value: payload.value,
-                channel: payload.channel
-              });
-            }
+            _this._onmidimessage(e);
           };
 
           return input.open().then(resolve, reject);
@@ -158,7 +247,7 @@ var LaunchControl = (function (_EventEmitter) {
 
       return new Promise(function (resolve, reject) {
         if (_this2._input === null) {
-          return reject(new TypeError("Launch Control is not opened"));
+          return reject(new TypeError("" + _this2.deviceName + " has already been closed"));
         }
         _this2._input.close().then(resolve, reject);
         _this2._input = null;
@@ -166,13 +255,16 @@ var LaunchControl = (function (_EventEmitter) {
     }
   }]);
 
-  return LaunchControl;
-})(_EventEmitter3["default"]);
+  return WebMIDIDevice;
+})(_MIDIDevice3["default"]);
 
-exports["default"] = LaunchControl;
+exports["default"] = WebMIDIDevice;
 module.exports = exports["default"];
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Constants":1,"./EventEmitter":2,"./Parser":3}],5:[function(require,module,exports){
+},{"./MIDIDevice":4}],6:[function(require,module,exports){
+module.exports = require("./lib/WebMIDIDevice");
+
+},{"./lib/WebMIDIDevice":5}],7:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -475,8 +567,27 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],6:[function(require,module,exports){
-module.exports = require("./lib/web-midi-interface");
+},{}],8:[function(require,module,exports){
+module.exports = extend
 
-},{"./lib/web-midi-interface":4}]},{},[6])(6)
+function extend() {
+    var target = {}
+
+    for (var i = 0; i < arguments.length; i++) {
+        var source = arguments[i]
+
+        for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+                target[key] = source[key]
+            }
+        }
+    }
+
+    return target
+}
+
+},{}],9:[function(require,module,exports){
+module.exports = require("./lib/WebMIDILaunchControl");
+
+},{"./lib/WebMIDILaunchControl":2}]},{},[9])(9)
 });

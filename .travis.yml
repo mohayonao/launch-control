@@ -1,7 +1,6 @@
 language: node_js
 node_js:
   - "0.12"
-  - "io.js"
 before_install:
   - sudo apt-get install libasound2-dev alsa-utils alsa-oss
 script:
