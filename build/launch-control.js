@@ -19,25 +19,25 @@ var _xtend2 = _interopRequireDefault(_xtend);
 
 function parseMessage(b0, b1, b2) {
   var value = Math.max(0, Math.min(b2, 127));
-  var channel = Math.max(1, Math.min((b0 & 15) - 7, 16));
+  var channel = Math.max(0, Math.min(b0 & 15, 15));
 
   switch (b0 & 240) {
     case 144:
       // note on
       if (9 <= b1 && b1 <= 12 && value === 127) {
-        return { control: "pad", track: b1 - 8, value: value, channel: channel };
+        return { control: "pad", track: b1 - 9, value: value, channel: channel };
       }
       if (25 <= b1 && b1 <= 28) {
-        return { control: "pad", track: b1 - 20, value: value, channel: channel };
+        return { control: "pad", track: b1 - 21, value: value, channel: channel };
       }
       break;
     case 176:
       // control change
       if (21 <= b1 && b1 <= 28) {
-        return { control: "knob1", track: b1 - 20, value: value, channel: channel };
+        return { control: "knob1", track: b1 - 21, value: value, channel: channel };
       }
       if (41 <= b1 && b1 <= 48) {
-        return { control: "knob2", track: b1 - 40, value: value, channel: channel };
+        return { control: "knob2", track: b1 - 41, value: value, channel: channel };
       }
       break;
   }
@@ -63,7 +63,7 @@ function _extends(MIDIDevice) {
           return;
         }
 
-        _this.emit("message", (0, _xtend2["default"])({ type: "message" }, msg));
+        _this.emit("message", (0, _xtend2["default"])({ type: "message", deviceName: _this.deviceName }, msg));
       };
     }
 

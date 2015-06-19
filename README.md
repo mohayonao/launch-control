@@ -3,7 +3,7 @@
 [![NPM Version](http://img.shields.io/npm/v/@mohayonao/launch-control.svg?style=flat-square)](https://www.npmjs.org/package/@mohayonao/launch-control)
 [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](http://mohayonao.mit-license.org/)
 
-> utility for novation LAUNCH CONTROL
+> JavaScript utility for novation LAUNCH CONTROL
 
 [![Launch Control](http://otononaru.appspot.com/cdn/git-hub/launch-control/launch-control.png)](http://www.h-resolution.com/novation/launchcontrol.php)
 
@@ -33,9 +33,9 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
 
 - `message: object`
   - `control: string` "knob1", "knob2" or "pad"
-  - `track: number` 1 - 8
+  - `track: number` 0 - 7
   - `value: number` 0 - 127
-  - `channel: number` 1 - 8
+  - `channel: number` 8 - 15
 
 ## Usage
 
