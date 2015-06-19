@@ -5,7 +5,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -16,6 +18,20 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var _xtend = require("xtend");
 
 var _xtend2 = _interopRequireDefault(_xtend);
+
+var TRACK_TO_NOTE = [9, 10, 11, 12, 25, 26, 27, 28];
+var COLORS = {
+  off: 0,
+  "dark red": 1,
+  red: 2,
+  "light red": 3,
+  "dark green": 4,
+  "dark amber": 5,
+  green: 8,
+  amber: 10,
+  "light green": 12,
+  "light amber": 15
+};
 
 function parseMessage(b0, b1, b2) {
   var value = Math.max(0, Math.min(b2, 127));
@@ -56,6 +72,7 @@ function _extends(MIDIDevice) {
 
       _get(Object.getPrototypeOf(LaunchControl.prototype), "constructor", this).call(this, deviceName);
 
+      this._channel = 8;
       this._onmidimessage = function (e) {
         var msg = parseMessage(e.data[0], e.data[1], e.data[2]);
 
@@ -63,11 +80,38 @@ function _extends(MIDIDevice) {
           return;
         }
 
+        _this._channel = msg.channel;
         _this.emit("message", (0, _xtend2["default"])({ type: "message", deviceName: _this.deviceName }, msg));
       };
     }
 
     _inherits(LaunchControl, _MIDIDevice);
+
+    _createClass(LaunchControl, [{
+      key: "led",
+      value: function led(track, color) {
+        var _this2 = this;
+
+        var channel = arguments[2] === undefined ? this._channel : arguments[2];
+
+        if (typeof color === "string") {
+          color = COLORS[color];
+        }
+        color = (color | 0) % 16;
+
+        var b0 = 144 + channel % 16;
+        var b2 = ((color & 12) << 2) + 12 + (color & 3);
+
+        if (track === "all") {
+          TRACK_TO_NOTE.forEach(function (b1) {
+            _this2.send([b0, b1, b2]);
+          });
+        } else {
+          var b1 = TRACK_TO_NOTE[track % TRACK_TO_NOTE.length];
+          this.send([b0, b1, b2]);
+        }
+      }
+    }]);
 
     return LaunchControl;
   })(MIDIDevice);
@@ -136,6 +180,7 @@ var MIDIDevice = (function (_EventEmitter) {
     _get(Object.getPrototypeOf(MIDIDevice.prototype), "constructor", this).call(this);
 
     this._input = null;
+    this._output = null;
     this._deviceName = deviceName;
   }
 
@@ -150,6 +195,11 @@ var MIDIDevice = (function (_EventEmitter) {
     key: "close",
     value: function close() {
       return Promise.reject(new Error("subclass responsibility"));
+    }
+  }, {
+    key: "send",
+    value: function send() {
+      throw new Error("subclass responsibility");
     }
   }, {
     key: "_onmidimessage",
@@ -217,25 +267,38 @@ var WebMIDIDevice = (function (_MIDIDevice) {
           return reject(new TypeError("Web MIDI API is not supported"));
         }
 
-        if (_this._input !== null) {
+        if (_this._input !== null || _this._output !== null) {
           return reject(new TypeError("" + _this.deviceName + " has already been opened"));
         }
 
-        var successCallback = function successCallback(m) {
-          var input = findMIDIPortByName(m.inputs.values(), _this.deviceName);
+        var successCallback = function successCallback(access) {
+          _this._access = access;
 
-          if (input === null) {
+          var input = findMIDIPortByName(access.inputs.values(), _this.deviceName);
+          var output = findMIDIPortByName(access.outputs.values(), _this.deviceName);
+
+          if (input === null && output === null) {
             return reject(new TypeError("" + _this.deviceName + " is not found"));
           }
 
-          _this._input = input;
+          if (input !== null) {
+            _this._input = input;
 
-          input.onmidimessage = function (e) {
-            _this._onmidimessage(e);
-          };
+            input.onmidimessage = function (e) {
+              _this._onmidimessage(e);
+            };
+          }
 
-          return input.open().then(resolve, reject);
+          if (output !== null) {
+            _this._output = output;
+          }
+
+          return Promise.all([_this._input && _this._input.open(), _this._output && _this._output.open()]).then(resolve, reject);
         };
+
+        if (_this._access) {
+          return successCallback(_this._access);
+        }
 
         return global.navigator.requestMIDIAccess().then(successCallback, reject);
       });
@@ -246,12 +309,25 @@ var WebMIDIDevice = (function (_MIDIDevice) {
       var _this2 = this;
 
       return new Promise(function (resolve, reject) {
-        if (_this2._input === null) {
+        if (_this2._input === null && _this2._output === null) {
           return reject(new TypeError("" + _this2.deviceName + " has already been closed"));
         }
-        _this2._input.close().then(resolve, reject);
+
+        var input = _this2._input;
+        var output = _this2._output;
+
         _this2._input = null;
+        _this2._output = null;
+
+        return Promise.all([input && input.close(), output && output.close()]).then(resolve, reject);
       });
+    }
+  }, {
+    key: "send",
+    value: function send(data) {
+      if (this._output !== null) {
+        this._output.send(data);
+      }
     }
   }]);
 
