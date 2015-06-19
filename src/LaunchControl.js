@@ -1,43 +1,82 @@
 import xtend from "xtend";
 
-const TRACK_TO_NOTE = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
-const COLORS = {
-  off: 0,
+const PAD = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
+const KNOB1 = [ 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c ];
+const KNOB2 = [ 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30 ];
+const COLOR_NAMES = {
+  "off": 0,
   "dark red": 1,
-  red: 2,
+  "red": 2,
   "light red": 3,
   "dark green": 4,
   "dark amber": 5,
-  green: 8,
-  amber: 10,
+  "green": 8,
+  "amber": 10,
   "light green": 12,
   "light amber": 15,
 };
+const TRACK_SELECTOR = {
+  all: () => true,
+  even: (_, i) => i % 2 === 0,
+  odd: (_, i) => i % 2 === 1,
+};
 
-function parseMessage(b0, b1, b2) {
-  let value = Math.max(0, Math.min(b2, 127));
-  let channel = Math.max(0, Math.min(b0 & 0x0f, 15));
+function parseMessage(st, d1, d2) {
+  let messageType = st & 0xf0;
+  let value = Math.max(0, Math.min(d2, 127));
+  let channel = Math.max(0, Math.min(st & 0x0f, 15));
+  let track;
 
-  switch (b0 & 0xf0) {
-    case 0x90: // note on
-      if (0x09 <= b1 && b1 <= 0x0c && value === 127) {
-        return { control: "pad", track: (b1 - 0x09), value, channel };
-      }
-      if (0x19 <= b1 && b1 <= 0x1c) {
-        return { control: "pad", track: (b1 - 0x15), value, channel };
-      }
-      break;
-    case 0xb0: // control change
-      if (0x15 <= b1 && b1 <= 0x1c) {
-        return { control: "knob1", track: (b1 - 0x15), value, channel };
-      }
-      if (0x29 <= b1 && b1 <= 0x30) {
-        return { control: "knob2", track: (b1 - 0x29), value, channel };
-      }
-      break;
+  if (messageType === 0x90) { // note on
+    track = PAD.indexOf(d1);
+    if (track !== -1) {
+      return { control: "pad", track, value, channel };
+    }
+  }
+
+  if (messageType === 0xb0) { // control change
+    track = KNOB1.indexOf(d1);
+    if (track !== -1) {
+      return { control: "knob1", track, value, channel };
+    }
+
+    track = KNOB2.indexOf(d1);
+    if (track !== -1) {
+      return { control: "knob2", track, value, channel };
+    }
   }
 
   return null;
+}
+
+function buildLedData(track, color, channel) {
+  if (typeof color === "string") {
+    color = COLOR_NAMES[color];
+  }
+  color = (color|0) % 16;
+
+  let st = 0x90 + ((channel|0) % 16);
+  let d2 = ((color & 0x0c) << 2) + 0x0c + (color & 0x03);
+
+  if (TRACK_SELECTOR.hasOwnProperty(track)) {
+    return PAD.filter(TRACK_SELECTOR[track]).map(d1 => [ st, d1, d2 ]);
+  }
+
+  if (/^[-o]+$/.test(track)) {
+    let data = [];
+
+    for (let i = 0; i < 8; i++) {
+      if (track[i % track.length] === "o") {
+        data.push([ st, PAD[i], d2 ]);
+      }
+    }
+
+    return data;
+  }
+
+  let d1 = PAD[(track|0) % 8];
+
+  return [ [ st, d1, d2 ] ];
 }
 
 function _extends(MIDIDevice) {
@@ -59,22 +98,7 @@ function _extends(MIDIDevice) {
     }
 
     led(track, color, channel = this._channel) {
-      if (typeof color === "string") {
-        color = COLORS[color];
-      }
-      color = (color|0) % 16;
-
-      let b0 = 0x90 + (channel % 16);
-      let b2 = ((color & 0x0c) << 2) + 0x0c + (color & 0x03);
-
-      if (track === "all") {
-        TRACK_TO_NOTE.forEach((b1) => {
-          this.send([ b0, b1, b2 ]);
-        });
-      } else {
-        let b1 = TRACK_TO_NOTE[track % TRACK_TO_NOTE.length];
-        this.send([ b0, b1, b2 ]);
-      }
+      buildLedData(track, color, channel).forEach((data) => { this.send(data); });
     }
   };
 }
@@ -82,4 +106,5 @@ function _extends(MIDIDevice) {
 export default {
   extends: _extends,
   parseMessage,
+  buildLedData,
 };
