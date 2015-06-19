@@ -1,13 +1,13 @@
 {
   "name": "@mohayonao/launch-control",
   "description": "JavaScript utility for novation LAUNCH CONTROL",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "author": "Nao Yonamine <mohayonao@gmail.com>",
   "bugs": {
     "url": "https://github.com/mohayonao/launch-control/issues"
   },
   "dependencies": {
-    "@mohayonao/midi-device": "^0.2.0",
+    "@mohayonao/midi-device": "^0.3.1",
     "xtend": "^4.0.0"
   },
   "devDependencies": {

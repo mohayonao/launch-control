@@ -5,29 +5,74 @@ import LaunchControl from "../src/LaunchControl";
 
 describe("LaunchControl", () => {
   describe(".extends(MIDIDevice: class): class extends MIDIDevice", () => {
-    it("works", () => {
+    it("constructor(deviceName: string)", () => {
+      let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
+      let launchControl = new TestLaunchControl("Launch Control 2");
+
+      assert(launchControl instanceof TestLaunchControl);
+      assert(launchControl instanceof TestMIDIDevice);
+      assert(launchControl.deviceName === "Launch Control 2");
+    });
+    it("event: 'message'", () => {
       let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
       let launchControl = new TestLaunchControl();
       let onmessage = sinon.spy();
 
       launchControl.on("message", onmessage);
 
-      return launchControl.open().then((input) => {
-        input.send([ 0x98, 0x09, 0x7f ]);
+      return launchControl.open().then(([ input ]) => {
+        input.recv([ 0x98, 0x09, 0x7f ]);
 
         assert(onmessage.calledOnce);
-        assert.deepEqual(onmessage.args[0][0], {
-          type: "message",
-          deviceName: "Launch Control",
-          control: "pad",
-          track: 0,
-          value: 127,
-          channel: 8,
-        });
+
+        let msg = onmessage.args[0][0];
+        assert(msg.type === "message");
+        assert(msg.deviceName === "Launch Control");
+        assert(msg.control === "pad");
+        assert(msg.track === 0);
+        assert(msg.value === 127);
+        assert(msg.channel === 8);
         onmessage.reset();
 
-        input.send([ 0x00, 0x00, 0x00 ]);
+        input.recv([ 0x00, 0x00, 0x00 ]);
         assert(!onmessage.called);
+      });
+    });
+    it("#led(track: number, color: number, [channel: number]): void", () => {
+      let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
+      let launchControl = new TestLaunchControl();
+
+      return launchControl.open().then((ports) => {
+        let output = ports[1];
+
+        output.onmessage = sinon.spy();
+
+        launchControl.led(0, "red");
+        assert(output.onmessage.calledOnce);
+        assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x0e ]);
+        output.onmessage.reset();
+
+        launchControl.led(0, "deep purple");
+        assert(output.onmessage.calledOnce);
+        assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x0c ]);
+        output.onmessage.reset();
+
+        launchControl.led(20, 13, 9);
+        assert(output.onmessage.calledOnce);
+        assert.deepEqual(output.onmessage.args[0][0], [ 0x99, 0x19, 0x3d ]);
+        output.onmessage.reset();
+
+        launchControl.led("all", "amber");
+        assert(output.onmessage.callCount === 8);
+        assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[1][0], [ 0x98, 0x0a, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[2][0], [ 0x98, 0x0b, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[3][0], [ 0x98, 0x0c, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[4][0], [ 0x98, 0x19, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[5][0], [ 0x98, 0x1a, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[6][0], [ 0x98, 0x1b, 0x2e ]);
+        assert.deepEqual(output.onmessage.args[7][0], [ 0x98, 0x1c, 0x2e ]);
+        output.onmessage.reset();
       });
     });
   });
