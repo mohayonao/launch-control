@@ -52,31 +52,66 @@ describe("LaunchControl", () => {
         assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x0e ]);
         output.onmessage.reset();
 
-        launchControl.led(0, "deep purple");
-        assert(output.onmessage.calledOnce);
-        assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x0c ]);
-        output.onmessage.reset();
-
-        launchControl.led(20, 13, 9);
-        assert(output.onmessage.calledOnce);
-        assert.deepEqual(output.onmessage.args[0][0], [ 0x99, 0x19, 0x3d ]);
-        output.onmessage.reset();
-
-        launchControl.led("all", "amber");
-        assert(output.onmessage.callCount === 8);
-        assert.deepEqual(output.onmessage.args[0][0], [ 0x98, 0x09, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[1][0], [ 0x98, 0x0a, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[2][0], [ 0x98, 0x0b, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[3][0], [ 0x98, 0x0c, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[4][0], [ 0x98, 0x19, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[5][0], [ 0x98, 0x1a, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[6][0], [ 0x98, 0x1b, 0x2e ]);
-        assert.deepEqual(output.onmessage.args[7][0], [ 0x98, 0x1c, 0x2e ]);
-        output.onmessage.reset();
+        launchControl.led("o------o", 13, 9);
+        assert(output.onmessage.callCount === 2);
+        assert.deepEqual(output.onmessage.args[0][0], [ 0x99, 0x09, 0x3d ]);
+        assert.deepEqual(output.onmessage.args[1][0], [ 0x99, 0x1c, 0x3d ]);
       });
     });
   });
-  describe(".parseMessage(b0: number, b1: number, b2: number): object", () => {
+  describe(".buildLedData(track: number, color: number, channel: number): number[][]", () => {
+    it("works", () => {
+      assert.deepEqual(LaunchControl.buildLedData(0, 0, 0), [ [ 0x90, 0x09, 0x0c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, 1, 0), [ [ 0x90, 0x09, 0x0d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(1, 2, 0), [ [ 0x90, 0x0a, 0x0e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(1, 3, 0), [ [ 0x90, 0x0a, 0x0f ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(2, 4, 0), [ [ 0x90, 0x0b, 0x1c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(2, 5, 0), [ [ 0x90, 0x0b, 0x1d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(3, 6, 0), [ [ 0x90, 0x0c, 0x1e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(3, 7, 0), [ [ 0x90, 0x0c, 0x1f ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(4, 8, 8), [ [ 0x98, 0x19, 0x2c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(4, 9, 8), [ [ 0x98, 0x19, 0x2d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(5, 10, 8), [ [ 0x98, 0x1a, 0x2e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(5, 11, 8), [ [ 0x98, 0x1a, 0x2f ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(6, 12, 8), [ [ 0x98, 0x1b, 0x3c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(6, 13, 8), [ [ 0x98, 0x1b, 0x3d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(7, 14, 8), [ [ 0x98, 0x1c, 0x3e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(7, 15, 8), [ [ 0x98, 0x1c, 0x3f ] ]);
+
+      assert.deepEqual(LaunchControl.buildLedData(0, "off", 0), [ [ 0x90, 0x09, 0x0c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "dark red", 0), [ [ 0x90, 0x09, 0x0d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "red", 0), [ [ 0x90, 0x09, 0x0e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "light red", 0), [ [ 0x90, 0x09, 0x0f ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "dark green", 0), [ [ 0x90, 0x09, 0x1c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "dark amber", 0), [ [ 0x90, 0x09, 0x1d ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "green", 0), [ [ 0x90, 0x09, 0x2c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "amber", 0), [ [ 0x90, 0x09, 0x2e ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "light green", 0), [ [ 0x90, 0x09, 0x3c ] ]);
+      assert.deepEqual(LaunchControl.buildLedData(0, "light amber", 0), [ [ 0x90, 0x09, 0x3f ] ]);
+
+      assert.deepEqual(LaunchControl.buildLedData("all", 0, 0), [
+        [ 0x90, 0x09, 0x0c ], [ 0x90, 0x0a, 0x0c ], [ 0x90, 0x0b, 0x0c ], [ 0x90, 0x0c, 0x0c ],
+        [ 0x90, 0x19, 0x0c ], [ 0x90, 0x1a, 0x0c ], [ 0x90, 0x1b, 0x0c ], [ 0x90, 0x1c, 0x0c ],
+      ]);
+
+      assert.deepEqual(LaunchControl.buildLedData("even", 1, 0), [
+        [ 0x90, 0x09, 0x0d ], [ 0x90, 0x0b, 0x0d ], [ 0x90, 0x19, 0x0d ], [ 0x90, 0x1b, 0x0d ],
+      ]);
+
+      assert.deepEqual(LaunchControl.buildLedData("odd", 1, 0), [
+        [ 0x90, 0x0a, 0x0d ], [ 0x90, 0x0c, 0x0d ], [ 0x90, 0x1a, 0x0d ], [ 0x90, 0x1c, 0x0d ],
+      ]);
+
+      assert.deepEqual(LaunchControl.buildLedData("oooo----", 0, 0), [
+        [ 0x90, 0x09, 0x0c ], [ 0x90, 0x0a, 0x0c ], [ 0x90, 0x0b, 0x0c ], [ 0x90, 0x0c, 0x0c ],
+      ]);
+
+      assert.deepEqual(LaunchControl.buildLedData("oo--", 0, 0), [
+        [ 0x90, 0x09, 0x0c ], [ 0x90, 0x0a, 0x0c ], [ 0x90, 0x19, 0x0c ], [ 0x90, 0x1a, 0x0c ],
+      ]);
+    });
+  });
+  describe(".parseMessage(st: number, d1: number, d2: number): object", () => {
     it("pad", () => {
       assert.deepEqual(LaunchControl.parseMessage(0x98, 0x09, 0x7f), { control: "pad", track: 0, value: 127, channel: 8 });
       assert.deepEqual(LaunchControl.parseMessage(0x98, 0x0a, 0x7f), { control: "pad", track: 1, value: 127, channel: 8 });
