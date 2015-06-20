@@ -19,46 +19,93 @@ var _xtend = require("xtend");
 
 var _xtend2 = _interopRequireDefault(_xtend);
 
-var TRACK_TO_NOTE = [9, 10, 11, 12, 25, 26, 27, 28];
-var COLORS = {
-  off: 0,
+var PAD = [9, 10, 11, 12, 25, 26, 27, 28];
+var KNOB1 = [21, 22, 23, 24, 25, 26, 27, 28];
+var KNOB2 = [41, 42, 43, 44, 45, 46, 47, 48];
+var COLOR_NAMES = {
+  "off": 0,
   "dark red": 1,
-  red: 2,
+  "red": 2,
   "light red": 3,
   "dark green": 4,
   "dark amber": 5,
-  green: 8,
-  amber: 10,
+  "green": 8,
+  "amber": 10,
   "light green": 12,
   "light amber": 15
 };
+var TRACK_SELECTOR = {
+  all: function all() {
+    return true;
+  },
+  even: function even(_, i) {
+    return i % 2 === 0;
+  },
+  odd: function odd(_, i) {
+    return i % 2 === 1;
+  }
+};
 
-function parseMessage(b0, b1, b2) {
-  var value = Math.max(0, Math.min(b2, 127));
-  var channel = Math.max(0, Math.min(b0 & 15, 15));
+function parseMessage(st, d1, d2) {
+  var messageType = st & 240;
+  var value = Math.max(0, Math.min(d2, 127));
+  var channel = Math.max(0, Math.min(st & 15, 15));
+  var track = undefined;
 
-  switch (b0 & 240) {
-    case 144:
-      // note on
-      if (9 <= b1 && b1 <= 12 && value === 127) {
-        return { control: "pad", track: b1 - 9, value: value, channel: channel };
-      }
-      if (25 <= b1 && b1 <= 28) {
-        return { control: "pad", track: b1 - 21, value: value, channel: channel };
-      }
-      break;
-    case 176:
-      // control change
-      if (21 <= b1 && b1 <= 28) {
-        return { control: "knob1", track: b1 - 21, value: value, channel: channel };
-      }
-      if (41 <= b1 && b1 <= 48) {
-        return { control: "knob2", track: b1 - 41, value: value, channel: channel };
-      }
-      break;
+  if (messageType === 144) {
+    // note on
+    track = PAD.indexOf(d1);
+    if (track !== -1) {
+      return { control: "pad", track: track, value: value, channel: channel };
+    }
+  }
+
+  if (messageType === 176) {
+    // control change
+    track = KNOB1.indexOf(d1);
+    if (track !== -1) {
+      return { control: "knob1", track: track, value: value, channel: channel };
+    }
+
+    track = KNOB2.indexOf(d1);
+    if (track !== -1) {
+      return { control: "knob2", track: track, value: value, channel: channel };
+    }
   }
 
   return null;
+}
+
+function buildLedData(track, color, channel) {
+  if (typeof color === "string") {
+    color = COLOR_NAMES[color];
+  }
+  color = (color | 0) % 16;
+
+  var st = 144 + (channel | 0) % 16;
+  var d2 = ((color & 12) << 2) + 12 + (color & 3);
+
+  if (TRACK_SELECTOR.hasOwnProperty(track)) {
+    return PAD.filter(TRACK_SELECTOR[track]).map(function (d1) {
+      return [st, d1, d2];
+    });
+  }
+
+  if (/^[-o]+$/.test(track)) {
+    var data = [];
+
+    for (var i = 0; i < 8; i++) {
+      if (track[i % track.length] === "o") {
+        data.push([st, PAD[i], d2]);
+      }
+    }
+
+    return data;
+  }
+
+  var d1 = PAD[(track | 0) % 8];
+
+  return [[st, d1, d2]];
 }
 
 function _extends(MIDIDevice) {
@@ -94,22 +141,9 @@ function _extends(MIDIDevice) {
 
         var channel = arguments[2] === undefined ? this._channel : arguments[2];
 
-        if (typeof color === "string") {
-          color = COLORS[color];
-        }
-        color = (color | 0) % 16;
-
-        var b0 = 144 + channel % 16;
-        var b2 = ((color & 12) << 2) + 12 + (color & 3);
-
-        if (track === "all") {
-          TRACK_TO_NOTE.forEach(function (b1) {
-            _this2.send([b0, b1, b2]);
-          });
-        } else {
-          var b1 = TRACK_TO_NOTE[track % TRACK_TO_NOTE.length];
-          this.send([b0, b1, b2]);
-        }
+        buildLedData(track, color, channel).forEach(function (data) {
+          _this2.send(data);
+        });
       }
     }]);
 
@@ -119,7 +153,8 @@ function _extends(MIDIDevice) {
 
 exports["default"] = {
   "extends": _extends,
-  parseMessage: parseMessage
+  parseMessage: parseMessage,
+  buildLedData: buildLedData
 };
 module.exports = exports["default"];
 },{"xtend":8}],2:[function(require,module,exports){
