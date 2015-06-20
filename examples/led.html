@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LAUNCH CONTROL DEMO</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+  <script src="//cdn.jsdelivr.net/es6-promise/1.0.0/promise.min.js"></script>
+  <script src="../build/launch-control.js"></script>
+  <script src="./led.js"></script>
+  <script>
+  window.onload = function() {
+    "use strict";
+
+    var view = document.getElementById("log");
+    var lines = [];
+
+    console.log = function(msg) {
+      lines.unshift(msg);
+      if (40 <= lines.length) {
+        lines.pop();
+      }
+      view.textContent = lines.join("\n");
+    };
+  };
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>LAUNCH CONTROL DEMO</h1>
+    <div>
+      LED operation using knob controllers
+    </div>
+    <pre id="log" style="margin-top: 15px"></pre>
+  </div>
+</body>
+</html>
