@@ -19,6 +19,20 @@ Browser
 
 - [launch-control.js](http://mohayonao.github.io/launch-control/build/launch-control.js)
 
+## Examples
+
+Online examples (using Web MIDI API)
+
+- [dump messages from Launch Control](http://mohayonao.github.io/launch-control/examples/dump.html)
+- [LED operation using knob controllers](http://mohayonao.github.io/launch-control/examples/led.html)
+- [reset all LED](http://mohayonao.github.io/launch-control/examples/reset.html)
+
+Run example with Node.js (using [node-midi](https://github.com/justinlatimer/node-midi))
+
+```
+node examples/dump.js
+```
+
 ## API
 ### LaunchControl
 - `constructor(deviceName: string = 'Launch Control')`
@@ -28,9 +42,10 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
 
 - `open(): Promise<[ input, output ]>`
 - `close(): Promise<[ input, output ]>`
+- `send(data: number[]): void`
 - `led(track: number|string, color: number|string, [channel: number]): void`
-  - `track` 0 - 7 or "all"
-  - `color` = `(greenVelocity << 2) + redVelocity` or see below
+  - `track` 0 - 7 or "all", "even", "odd"
+  - `color` index or name (see below)
 
 #### Events
 
