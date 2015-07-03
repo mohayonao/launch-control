@@ -37,6 +37,10 @@ node examples/dump.js
 ### LaunchControl
 - `constructor(deviceName: string = 'Launch Control')`
 
+#### Class methods
+
+- `requestDeviceNames(): Promise<{ inputs: string[], outputs: string[] }>`
+
 #### Instance methods
 _Also implements methods from the interface [EventEmitter](https://nodejs.org/api/events.html)._
 
@@ -50,7 +54,14 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
 #### Events
 
 - `message`
-  - `control: string` "knob1", "knob2" or "pad"
+  - `control: string`
+    - knob1
+    - knob2
+    - pad
+    - cursor:up
+    - cursor:down
+    - cursor:left
+    - cursor:right
   - `deviceName: string`
   - `track: number` 0 - 7
   - `value: number` 0 - 127
