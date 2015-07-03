@@ -7,7 +7,9 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+var _CURSOR, _extends$parseMessage$buildLedData;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -15,22 +17,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 var _xtend = require("xtend");
 
 var _xtend2 = _interopRequireDefault(_xtend);
 
-var PAD = [9, 10, 11, 12, 25, 26, 27, 28];
-var KNOB1 = [21, 22, 23, 24, 25, 26, 27, 28];
-var KNOB2 = [41, 42, 43, 44, 45, 46, 47, 48];
+var PAD = [0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c];
+var KNOB1 = [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c];
+var KNOB2 = [0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30];
+var CURSOR = (_CURSOR = {}, _defineProperty(_CURSOR, 0x72, "up"), _defineProperty(_CURSOR, 0x73, "down"), _defineProperty(_CURSOR, 0x74, "left"), _defineProperty(_CURSOR, 0x75, "right"), _CURSOR);
 var COLOR_NAMES = {
-  "off": 0,
+  off: 0,
   "dark red": 1,
-  "red": 2,
+  red: 2,
   "light red": 3,
   "dark green": 4,
   "dark amber": 5,
-  "green": 8,
-  "amber": 10,
+  green: 8,
+  amber: 10,
   "light green": 12,
   "light amber": 15
 };
@@ -47,21 +52,21 @@ var TRACK_SELECTOR = {
 };
 
 function parseMessage(st, d1, d2) {
-  var messageType = st & 240;
+  var messageType = st & 0xf0;
   var value = Math.max(0, Math.min(d2, 127));
-  var channel = Math.max(0, Math.min(st & 15, 15));
+  var channel = Math.max(0, Math.min(st & 0x0f, 15));
   var track = undefined;
 
-  if (messageType === 144) {
-    // note on
+  // note on
+  if (messageType === 0x90) {
     track = PAD.indexOf(d1);
     if (track !== -1) {
       return { control: "pad", track: track, value: value, channel: channel };
     }
   }
 
-  if (messageType === 176) {
-    // control change
+  // control change
+  if (messageType === 0xb0) {
     track = KNOB1.indexOf(d1);
     if (track !== -1) {
       return { control: "knob1", track: track, value: value, channel: channel };
@@ -70,6 +75,12 @@ function parseMessage(st, d1, d2) {
     track = KNOB2.indexOf(d1);
     if (track !== -1) {
       return { control: "knob2", track: track, value: value, channel: channel };
+    }
+
+    var cursor = CURSOR[d1];
+
+    if (cursor) {
+      return { control: "cursor:" + cursor, value: value, channel: channel };
     }
   }
 
@@ -82,8 +93,8 @@ function buildLedData(track, color, channel) {
   }
   color = (color | 0) % 16;
 
-  var st = 144 + (channel | 0) % 16;
-  var d2 = ((color & 12) << 2) + 12 + (color & 3);
+  var st = 0x90 + (channel | 0) % 16;
+  var d2 = ((color & 0x0c) << 2) + 0x0c + (color & 0x03);
 
   if (TRACK_SELECTOR.hasOwnProperty(track)) {
     return PAD.filter(TRACK_SELECTOR[track]).map(function (d1) {
@@ -151,11 +162,7 @@ function _extends(MIDIDevice) {
   })(MIDIDevice);
 }
 
-exports["default"] = {
-  "extends": _extends,
-  parseMessage: parseMessage,
-  buildLedData: buildLedData
-};
+exports["default"] = (_extends$parseMessage$buildLedData = {}, _defineProperty(_extends$parseMessage$buildLedData, "extends", _extends), _defineProperty(_extends$parseMessage$buildLedData, "parseMessage", parseMessage), _defineProperty(_extends$parseMessage$buildLedData, "buildLedData", buildLedData), _extends$parseMessage$buildLedData);
 module.exports = exports["default"];
 },{"xtend":8}],2:[function(require,module,exports){
 "use strict";
@@ -196,7 +203,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -241,8 +248,13 @@ var MIDIDevice = (function (_EventEmitter) {
     value: function _onmidimessage() {}
   }, {
     key: "deviceName",
-    get: function () {
+    get: function get() {
       return this._deviceName;
+    }
+  }], [{
+    key: "requestDeviceNames",
+    value: function requestDeviceNames() {
+      return Promise.reject(new Error("subclass responsibility"));
     }
   }]);
 
@@ -260,6 +272,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -281,13 +295,21 @@ function findMIDIPortByName(iter, deviceName) {
   return null;
 }
 
+function collectDeviceNames(iter) {
+  var result = [];
+
+  for (var x = iter.next(); !x.done; x = iter.next()) {
+    result.push(x.value.name);
+  }
+
+  return result;
+}
+
 var WebMIDIDevice = (function (_MIDIDevice) {
   function WebMIDIDevice() {
     _classCallCheck(this, WebMIDIDevice);
 
-    if (_MIDIDevice != null) {
-      _MIDIDevice.apply(this, arguments);
-    }
+    _get(Object.getPrototypeOf(WebMIDIDevice.prototype), "constructor", this).apply(this, arguments);
   }
 
   _inherits(WebMIDIDevice, _MIDIDevice);
@@ -303,7 +325,7 @@ var WebMIDIDevice = (function (_MIDIDevice) {
         }
 
         if (_this._input !== null || _this._output !== null) {
-          return reject(new TypeError("" + _this.deviceName + " has already been opened"));
+          return reject(new TypeError(_this.deviceName + " has already been opened"));
         }
 
         var successCallback = function successCallback(access) {
@@ -313,7 +335,7 @@ var WebMIDIDevice = (function (_MIDIDevice) {
           var output = findMIDIPortByName(access.outputs.values(), _this.deviceName);
 
           if (input === null && output === null) {
-            return reject(new TypeError("" + _this.deviceName + " is not found"));
+            return reject(new TypeError(_this.deviceName + " is not found"));
           }
 
           if (input !== null) {
@@ -345,7 +367,7 @@ var WebMIDIDevice = (function (_MIDIDevice) {
 
       return new Promise(function (resolve, reject) {
         if (_this2._input === null && _this2._output === null) {
-          return reject(new TypeError("" + _this2.deviceName + " has already been closed"));
+          return reject(new TypeError(_this2.deviceName + " has already been closed"));
         }
 
         var input = _this2._input;
@@ -363,6 +385,25 @@ var WebMIDIDevice = (function (_MIDIDevice) {
       if (this._output !== null) {
         this._output.send(data);
       }
+    }
+  }], [{
+    key: "requestDeviceNames",
+    value: function requestDeviceNames() {
+      return new Promise(function (resolve, reject) {
+        if (!global.navigator || typeof global.navigator.requestMIDIAccess !== "function") {
+          return reject(new TypeError("Web MIDI API is not supported"));
+        }
+
+        return global.navigator.requestMIDIAccess().then(function (access) {
+          var inputDeviceNames = collectDeviceNames(access.inputs.values());
+          var outputDeviceNames = collectDeviceNames(access.outputs.values());
+
+          resolve({
+            inputs: inputDeviceNames,
+            outputs: outputDeviceNames
+          });
+        }, reject);
+      });
     }
   }]);
 
