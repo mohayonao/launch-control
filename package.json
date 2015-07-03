@@ -1,25 +1,25 @@
 {
   "name": "@mohayonao/launch-control",
   "description": "JavaScript utility for novation LAUNCH CONTROL",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "author": "Nao Yonamine <mohayonao@gmail.com>",
   "bugs": {
     "url": "https://github.com/mohayonao/launch-control/issues"
   },
   "dependencies": {
-    "@mohayonao/midi-device": "^0.3.1",
+    "@mohayonao/midi-device": "^0.4.0",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
-    "babel": "^5.5.8",
-    "babel-eslint": "^3.1.17",
+    "babel": "^5.6.14",
+    "babel-eslint": "^3.1.20",
     "browserify": "^10.2.4",
-    "eslint": "^0.23.0",
+    "eslint": "^0.24.0",
     "espower-babel": "^3.2.0",
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
     "power-assert": "^0.11.0",
-    "sinon": "^1.15.3"
+    "sinon": "^1.15.4"
   },
   "files": [
     "package.json",
