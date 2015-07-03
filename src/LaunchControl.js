@@ -4,14 +4,14 @@ const PAD = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB1 = [ 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB2 = [ 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30 ];
 const COLOR_NAMES = {
-  "off": 0,
+  off: 0,
   "dark red": 1,
-  "red": 2,
+  red: 2,
   "light red": 3,
   "dark green": 4,
   "dark amber": 5,
-  "green": 8,
-  "amber": 10,
+  green: 8,
+  amber: 10,
   "light green": 12,
   "light amber": 15,
 };
@@ -27,14 +27,16 @@ function parseMessage(st, d1, d2) {
   let channel = Math.max(0, Math.min(st & 0x0f, 15));
   let track;
 
-  if (messageType === 0x90) { // note on
+  // note on
+  if (messageType === 0x90) {
     track = PAD.indexOf(d1);
     if (track !== -1) {
       return { control: "pad", track, value, channel };
     }
   }
 
-  if (messageType === 0xb0) { // control change
+  // control change
+  if (messageType === 0xb0) {
     track = KNOB1.indexOf(d1);
     if (track !== -1) {
       return { control: "knob1", track, value, channel };
@@ -104,7 +106,7 @@ function _extends(MIDIDevice) {
 }
 
 export default {
-  extends: _extends,
+  ["extends"]: _extends,
   parseMessage,
   buildLedData,
 };

@@ -26,6 +26,7 @@ describe("LaunchControl", () => {
         assert(onmessage.calledOnce);
 
         let msg = onmessage.args[0][0];
+
         assert(msg.type === "message");
         assert(msg.deviceName === "Launch Control");
         assert(msg.control === "pad");
