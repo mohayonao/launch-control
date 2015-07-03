@@ -3,6 +3,12 @@ import xtend from "xtend";
 const PAD = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB1 = [ 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB2 = [ 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30 ];
+const CURSOR = {
+  [0x72]: "up",
+  [0x73]: "down",
+  [0x74]: "left",
+  [0x75]: "right",
+};
 const COLOR_NAMES = {
   off: 0,
   "dark red": 1,
@@ -45,6 +51,12 @@ function parseMessage(st, d1, d2) {
     track = KNOB2.indexOf(d1);
     if (track !== -1) {
       return { control: "knob2", track, value, channel };
+    }
+
+    let cursor = CURSOR[d1];
+
+    if (cursor) {
+      return { control: `cursor:${cursor}`, value, channel };
     }
   }
 

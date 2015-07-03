@@ -7,15 +7,15 @@ describe("LaunchControl", () => {
   describe(".extends(MIDIDevice: class): class extends MIDIDevice", () => {
     it("constructor(deviceName: string)", () => {
       let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
-      let launchControl = new TestLaunchControl("Launch Control 2");
+      let launchControl = new TestLaunchControl();
 
       assert(launchControl instanceof TestLaunchControl);
       assert(launchControl instanceof TestMIDIDevice);
-      assert(launchControl.deviceName === "Launch Control 2");
+      assert(launchControl.deviceName === "Launch Control");
     });
     it("event: 'message'", () => {
       let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
-      let launchControl = new TestLaunchControl();
+      let launchControl = new TestLaunchControl("TestDevice1");
       let onmessage = sinon.spy();
 
       launchControl.on("message", onmessage);
@@ -28,7 +28,7 @@ describe("LaunchControl", () => {
         let msg = onmessage.args[0][0];
 
         assert(msg.type === "message");
-        assert(msg.deviceName === "Launch Control");
+        assert(msg.deviceName === "TestDevice1");
         assert(msg.control === "pad");
         assert(msg.track === 0);
         assert(msg.value === 127);
@@ -41,7 +41,7 @@ describe("LaunchControl", () => {
     });
     it("#led(track: number, color: number, [channel: number]): void", () => {
       let TestLaunchControl = LaunchControl.extends(TestMIDIDevice);
-      let launchControl = new TestLaunchControl();
+      let launchControl = new TestLaunchControl("TestDevice1");
 
       return launchControl.open().then((ports) => {
         let output = ports[1];
@@ -311,23 +311,26 @@ describe("LaunchControl", () => {
       assert.deepEqual(LaunchControl.parseMessage(0xbf, 0x2f, 0x7e), { control: "knob2", track: 6, value: 126, channel: 15 });
       assert.deepEqual(LaunchControl.parseMessage(0xbf, 0x30, 0x7f), { control: "knob2", track: 7, value: 127, channel: 15 });
     });
+    it("cursor", () => {
+      // ↑
+      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x72, 0x7f), { control: "cursor:up", value: 127, channel: 8 });
+      assert.deepEqual(LaunchControl.parseMessage(0xb9, 0x72, 0x00), { control: "cursor:up", value: 0, channel: 9 });
+      // ↓
+      assert.deepEqual(LaunchControl.parseMessage(0xba, 0x73, 0x7f), { control: "cursor:down", value: 127, channel: 10 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbb, 0x73, 0x00), { control: "cursor:down", value: 0, channel: 11 });
+      // ←
+      assert.deepEqual(LaunchControl.parseMessage(0xbc, 0x74, 0x7f), { control: "cursor:left", value: 127, channel: 12 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbd, 0x74, 0x00), { control: "cursor:left", value: 0, channel: 13 });
+      // →
+      assert.deepEqual(LaunchControl.parseMessage(0xbe, 0x75, 0x7f), { control: "cursor:right", value: 127, channel: 14 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbf, 0x75, 0x00), { control: "cursor:right", value: 0, channel: 15 });
+    });
     it("others", () => {
       // pad (release)
       assert.deepEqual(LaunchControl.parseMessage(0x88, 0x09, 0x00), null);
-      // ↑
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x72, 0x7f), null);
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x72, 0x00), null);
-      // ↓
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x73, 0x7f), null);
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x73, 0x00), null);
-      // ←
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x74, 0x7f), null);
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x74, 0x00), null);
-      // →
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x75, 0x7f), null);
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x75, 0x00), null);
       // unknown
       assert.deepEqual(LaunchControl.parseMessage(0x98, 0xa0, 0x7f), null);
+      assert.deepEqual(LaunchControl.parseMessage(0xb0, 0x70, 0x7f), null);
     });
   });
 });
