@@ -58,14 +58,14 @@ _Also implements methods from the interface [@mohayonao/event-emitter](https://g
     - knob1
     - knob2
     - pad
-    - cursor:up
-    - cursor:down
-    - cursor:left
-    - cursor:right
-  - `deviceName: string`
-  - `channel: number` 0 - 15
+    - cursor/up
+    - cursor/down
+    - cursor/left
+    - cursor/right
   - `value: number` 0 - 127
   - `track: number` 0 - 7
+  - `channel: number` 0 - 15
+  - `deviceName: string`
 
 #### Color Code
 | color name  | color index |
