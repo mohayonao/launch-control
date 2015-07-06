@@ -313,17 +313,17 @@ describe("LaunchControl", () => {
     });
     it("cursor", () => {
       // ↑
-      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x72, 0x7f), { dataType: "cursor/up", value: 127, channel: 8 });
-      assert.deepEqual(LaunchControl.parseMessage(0xb9, 0x72, 0x00), { dataType: "cursor/up", value: 0, channel: 9 });
+      assert.deepEqual(LaunchControl.parseMessage(0xb8, 0x72, 0x7f), { dataType: "cursor", direction: "up", value: 127, channel: 8 });
+      assert.deepEqual(LaunchControl.parseMessage(0xb9, 0x72, 0x00), null);
       // ↓
-      assert.deepEqual(LaunchControl.parseMessage(0xba, 0x73, 0x7f), { dataType: "cursor/down", value: 127, channel: 10 });
-      assert.deepEqual(LaunchControl.parseMessage(0xbb, 0x73, 0x00), { dataType: "cursor/down", value: 0, channel: 11 });
+      assert.deepEqual(LaunchControl.parseMessage(0xba, 0x73, 0x7f), { dataType: "cursor", direction: "down", value: 127, channel: 10 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbb, 0x73, 0x00), null);
       // ←
-      assert.deepEqual(LaunchControl.parseMessage(0xbc, 0x74, 0x7f), { dataType: "cursor/left", value: 127, channel: 12 });
-      assert.deepEqual(LaunchControl.parseMessage(0xbd, 0x74, 0x00), { dataType: "cursor/left", value: 0, channel: 13 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbc, 0x74, 0x7f), { dataType: "cursor", direction: "left", value: 127, channel: 12 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbd, 0x74, 0x00), null);
       // →
-      assert.deepEqual(LaunchControl.parseMessage(0xbe, 0x75, 0x7f), { dataType: "cursor/right", value: 127, channel: 14 });
-      assert.deepEqual(LaunchControl.parseMessage(0xbf, 0x75, 0x00), { dataType: "cursor/right", value: 0, channel: 15 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbe, 0x75, 0x7f), { dataType: "cursor", direction: "right", value: 127, channel: 14 });
+      assert.deepEqual(LaunchControl.parseMessage(0xbf, 0x75, 0x00), null);
     });
     it("others", () => {
       // pad (release)

@@ -4,10 +4,10 @@ const PAD = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB1 = [ 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c ];
 const KNOB2 = [ 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30 ];
 const CURSOR = {
-  [0x72]: "cursor/up",
-  [0x73]: "cursor/down",
-  [0x74]: "cursor/left",
-  [0x75]: "cursor/right",
+  [0x72]: "up",
+  [0x73]: "down",
+  [0x74]: "left",
+  [0x75]: "right",
 };
 const COLOR_NAMES = {
   off: 0,
@@ -34,7 +34,7 @@ function parseMessage(st, d1, d2) {
   let track;
 
   // note on
-  if (messageType === 0x90) {
+  if (messageType === 0x90 && value !== 0) {
     track = PAD.indexOf(d1);
     if (track !== -1) {
       return { dataType: "pad", track, value, channel };
@@ -55,8 +55,8 @@ function parseMessage(st, d1, d2) {
 
     let cursor = CURSOR[d1];
 
-    if (cursor) {
-      return { dataType: cursor, value, channel };
+    if (cursor && value !== 0) {
+      return { dataType: "cursor", direction: cursor, value, channel };
     }
   }
 
