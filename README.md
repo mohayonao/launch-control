@@ -58,12 +58,10 @@ _Also implements methods from the interface [@mohayonao/event-emitter](https://g
     - knob1
     - knob2
     - pad
-    - cursor/up
-    - cursor/down
-    - cursor/left
-    - cursor/right
+    - cursor
   - `value: number` 0 - 127
-  - `track: number` 0 - 7
+  - `track: number` 0 - 7 ( knob1, knob2, pad )
+  - `direction: string` "left", "right", "up" or "down" ( cursor )
   - `channel: number` 0 - 15
   - `deviceName: string`
 

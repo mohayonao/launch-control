@@ -26,7 +26,7 @@ var _xtend2 = _interopRequireDefault(_xtend);
 var PAD = [0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c];
 var KNOB1 = [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c];
 var KNOB2 = [0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30];
-var CURSOR = (_CURSOR = {}, _defineProperty(_CURSOR, 0x72, "cursor/up"), _defineProperty(_CURSOR, 0x73, "cursor/down"), _defineProperty(_CURSOR, 0x74, "cursor/left"), _defineProperty(_CURSOR, 0x75, "cursor/right"), _CURSOR);
+var CURSOR = (_CURSOR = {}, _defineProperty(_CURSOR, 0x72, "up"), _defineProperty(_CURSOR, 0x73, "down"), _defineProperty(_CURSOR, 0x74, "left"), _defineProperty(_CURSOR, 0x75, "right"), _CURSOR);
 var COLOR_NAMES = {
   off: 0,
   "dark red": 1,
@@ -58,7 +58,7 @@ function parseMessage(st, d1, d2) {
   var track = undefined;
 
   // note on
-  if (messageType === 0x90) {
+  if (messageType === 0x90 && value !== 0) {
     track = PAD.indexOf(d1);
     if (track !== -1) {
       return { dataType: "pad", track: track, value: value, channel: channel };
@@ -79,8 +79,8 @@ function parseMessage(st, d1, d2) {
 
     var cursor = CURSOR[d1];
 
-    if (cursor) {
-      return { dataType: cursor, value: value, channel: channel };
+    if (cursor && value !== 0) {
+      return { dataType: "cursor", direction: cursor, value: value, channel: channel };
     }
   }
 
