@@ -42,7 +42,7 @@ node examples/dump.js
 - `requestDeviceNames(): Promise<{ inputs: string[], outputs: string[] }>`
 
 #### Instance methods
-_Also implements methods from the interface [EventEmitter](https://nodejs.org/api/events.html)._
+_Also implements methods from the interface [@mohayonao/event-emitter](https://github.com/mohayonao/event-emitter)._
 
 - `open(): Promise<[ input, output ]>`
 - `close(): Promise<[ input, output ]>`
@@ -54,7 +54,7 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
 #### Events
 
 - `message`
-  - `control: string`
+  - `dataType: string`
     - knob1
     - knob2
     - pad
@@ -63,9 +63,9 @@ _Also implements methods from the interface [EventEmitter](https://nodejs.org/ap
     - cursor:left
     - cursor:right
   - `deviceName: string`
-  - `track: number` 0 - 7
+  - `channel: number` 0 - 15
   - `value: number` 0 - 127
-  - `channel: number` 8 - 15
+  - `track: number` 0 - 7
 
 #### Color Code
 | color name  | color index |
@@ -104,10 +104,10 @@ ctrl.open().then(function() {
 });
 
 ctrl.on("message", function(e) {
-  console.log("control: " + e.control);
-  console.log("track  : " + e.track);
-  console.log("value  : " + e.value);
-  console.log("channel: " + e.channel);
+  console.log("dataType: " + e.dataType);
+  console.log("track   : " + e.track);
+  console.log("value   : " + e.value);
+  console.log("channel : " + e.channel);
 });
 ```
 
