@@ -33,8 +33,8 @@ function parseMessage(st, d1, d2) {
   let channel = Math.max(0, Math.min(st & 0x0f, 15));
   let track;
 
-  // note on
-  if (messageType === 0x90 && value !== 0) {
+  // note on up (value=127) or down(value=0)
+  if (messageType === 0x80 || messageType === 0x90) {
     track = PAD.indexOf(d1);
     if (track !== -1) {
       return { dataType: "pad", track, value, channel };
