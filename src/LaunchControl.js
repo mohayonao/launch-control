@@ -27,17 +27,27 @@ const TRACK_SELECTOR = {
   odd: (_, i) => i % 2 === 1,
 };
 
-function parseMessage(st, d1, d2) {
+function parseMessage(st, d1, d2, opts) {
   let messageType = st & 0xf0;
   let value = Math.max(0, Math.min(d2, 127));
   let channel = Math.max(0, Math.min(st & 0x0f, 15));
   let track;
 
-  // note on up (value=127) or down(value=0)
-  if (messageType === 0x80 || messageType === 0x90) {
-    track = PAD.indexOf(d1);
-    if (track !== -1) {
-      return { dataType: "pad", track, value, channel };
+  if (opts && opts.enablePadOff) {
+    // note on up (value=127) or down(value=0)
+    if (messageType === 0x80 || messageType === 0x90) {
+      track = PAD.indexOf(d1);
+      if (track !== -1) {
+        return { dataType: "pad", track, value, channel };
+      }
+    }
+  } else {
+    // note on
+    if (messageType === 0x90 && value !== 0) {
+      track = PAD.indexOf(d1);
+      if (track !== -1) {
+        return { dataType: "pad", track, value, channel };
+      }
     }
   }
 
@@ -95,12 +105,22 @@ function buildLedData(track, color, channel) {
 
 function _extends(MIDIDevice) {
   return class LaunchControl extends MIDIDevice {
-    constructor(deviceName = "Launch Control") {
+    constructor(deviceName, opts) {
+      if (typeof deviceName === "string") {
+        opts = opts || {};
+      } else if (typeof deviceName === "object") {
+        opts = deviceName;
+        deviceName = "Launch Control";
+      } else {
+        deviceName = "Launch Control";
+        opts = {};
+      }
+
       super(deviceName);
 
       this._channel = 8;
       this._onmidimessage = (e) => {
-        let msg = parseMessage(e.data[0], e.data[1], e.data[2]);
+        let msg = parseMessage(e.data[0], e.data[1], e.data[2], opts);
 
         if (msg === null) {
           return;
