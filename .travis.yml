@@ -1,7 +1,12 @@
 language: node_js
+sudo: false
 node_js:
-  - "0.12"
+  - "6.0"
+  - "8.0"
 before_install:
   - sudo apt-get install libasound2-dev alsa-utils alsa-oss
+cache:
+  directories:
+    - node_modules
 script:
-  - "npm run travis"
+  - npm run travis
