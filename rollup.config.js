@@ -1,5 +1,6 @@
 import commonjs from "rollup-plugin-commonjs";
 import nodeResolve from "rollup-plugin-node-resolve";
+import nodeBuiltins from "rollup-plugin-node-builtins";
 
 const config = {
   output: {
@@ -10,6 +11,7 @@ const config = {
   plugins: [
     commonjs({ include: "node_modules/**" }),
     nodeResolve(),
+    nodeBuiltins(),
   ]
 };
 
