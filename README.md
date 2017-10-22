@@ -1,11 +1,11 @@
 # LAUNCH CONTROL
-[![Build Status](http://img.shields.io/travis/mohayonao/launch-control.svg?style=flat-square)](https://travis-ci.org/mohayonao/launch-control)
-[![NPM Version](http://img.shields.io/npm/v/@mohayonao/launch-control.svg?style=flat-square)](https://www.npmjs.org/package/@mohayonao/launch-control)
-[![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](http://mohayonao.mit-license.org/)
+[![Build Status](https://img.shields.io/travis/mohayonao/launch-control.svg?style=flat-square)](https://travis-ci.org/mohayonao/launch-control)
+[![NPM Version](https://img.shields.io/npm/v/@mohayonao/launch-control.svg?style=flat-square)](https://www.npmjs.org/package/@mohayonao/launch-control)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](https://mohayonao.mit-license.org/)
 
 > JavaScript utility for novation LAUNCH CONTROL
 
-[![Launch Control](http://otononaru.appspot.com/cdn/git-hub/launch-control/launch-control.png)](http://www.h-resolution.com/novation/launchcontrol.php)
+[![Launch Control](https://otononaru.appspot.com/cdn/git-hub/launch-control/launch-control.png)](https://www.h-resolution.com/novation/launchcontrol.php)
 
 ## Installation
 
@@ -17,15 +17,15 @@ npm install @mohayonao/launch-control
 
 Browser
 
-- [launch-control.js](http://mohayonao.github.io/launch-control/build/launch-control.js)
+- [launch-control.js](https://mohayonao.github.io/launch-control/build/launch-control.js)
 
 ## Examples
 
 Online examples (using Web MIDI API)
 
-- [dump messages from Launch Control](http://mohayonao.github.io/launch-control/examples/dump.html)
-- [LED operation using knob controllers](http://mohayonao.github.io/launch-control/examples/led.html)
-- [reset all LED](http://mohayonao.github.io/launch-control/examples/reset.html)
+- [dump messages from Launch Control](https://mohayonao.github.io/launch-control/examples/dump.html)
+- [LED operation using knob controllers](https://mohayonao.github.io/launch-control/examples/led.html)
+- [reset all LED](https://mohayonao.github.io/launch-control/examples/reset.html)
 
 Run example with Node.js (using [node-midi](https://github.com/justinlatimer/node-midi))
 
@@ -35,7 +35,8 @@ node examples/dump.js
 
 ## API
 ### LaunchControl
-- `constructor(deviceName: string = 'Launch Control')`
+- `constructor(deviceName: string = 'Launch Control', opts={})`
+  - `opts.enablePadOff` when true, enable to receive pad off events
 
 #### Class methods
 
