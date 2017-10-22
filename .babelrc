@@ -1,0 +1,14 @@
+{
+  "env": {
+    "cjs": {
+      "plugins": [ "transform-es2015-modules-commonjs" ]
+    },
+    "development": {
+      "presets": [ "power-assert" ],
+      "plugins": [ "transform-es2015-modules-commonjs" ]
+    },
+    "coverage": {
+      "plugins": [ "transform-es2015-modules-commonjs", "istanbul" ]
+    }
+  }
+}
