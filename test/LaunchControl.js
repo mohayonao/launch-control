@@ -328,9 +328,13 @@ describe("LaunchControl", () => {
     it("others", () => {
       // pad (release)
       assert.deepEqual(LaunchControl.parseMessage(0x88, 0x09, 0x00), null);
+      assert.deepEqual(LaunchControl.parseMessage(0x98, 0x09, 0x00), null);
       // unknown
       assert.deepEqual(LaunchControl.parseMessage(0x98, 0xa0, 0x7f), null);
       assert.deepEqual(LaunchControl.parseMessage(0xb0, 0x70, 0x7f), null);
+      //
+      assert.deepEqual(LaunchControl.parseMessage(0x88, 0x09, 0x00, { enablePadOff: true }), { dataType: "pad", track: 0, value: 0, channel: 8 });
+      assert.deepEqual(LaunchControl.parseMessage(0x98, 0x09, 0x00, { enablePadOff: true }), { dataType: "pad", track: 0, value: 0, channel: 8 });
     });
   });
 });
