@@ -1,33 +1,701 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.LaunchControl = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.LaunchControl = factory());
+}(this, (function () { 'use strict';
+
+var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+
+
+function unwrapExports (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+}
+
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+'use strict';
+
+var domain;
+
+// This constructor is used to store event handlers. Instantiating this is
+// faster than explicitly calling `Object.create(null)` to get a "clean" empty
+// object (tested with v8 v4.9).
+function EventHandlers() {}
+EventHandlers.prototype = Object.create(null);
+
+function EventEmitter() {
+  EventEmitter.init.call(this);
+}
+// nodejs oddity
+// require('events') === require('events').EventEmitter
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.usingDomains = false;
+
+EventEmitter.prototype.domain = undefined;
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+EventEmitter.init = function() {
+  this.domain = null;
+  if (EventEmitter.usingDomains) {
+    // if there is an active domain, then attach to it.
+    if (domain.active && !(this instanceof domain.Domain)) {
+      this.domain = domain.active;
+    }
+  }
+
+  if (!this._events || this._events === Object.getPrototypeOf(this)._events) {
+    this._events = new EventHandlers();
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+};
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events, domain;
+  var needDomainExit = false;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  domain = this.domain;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    er = arguments[1];
+    if (domain) {
+      if (!er)
+        er = new Error('Uncaught, unspecified "error" event');
+      er.domainEmitter = this;
+      er.domain = domain;
+      er.domainThrown = false;
+      domain.emit('error', er);
+    } else if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+    // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+    // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  if (needDomainExit)
+    domain.exit();
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = new EventHandlers();
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+                  listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] = prepend ? [listener, existing] :
+                                          [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+                            existing.length + ' ' + type + ' listeners added. ' +
+                            'Use emitter.setMaxListeners() to increase limit');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        emitWarning(w);
+      }
+    }
+  }
+
+  return target;
+}
+function emitWarning(e) {
+  typeof console.warn === 'function' ? console.warn(e) : console.log(e);
+}
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function _onceWrap(target, type, listener) {
+  var fired = false;
+  function g() {
+    target.removeListener(type, g);
+    if (!fired) {
+      fired = true;
+      listener.apply(target, arguments);
+    }
+  }
+  g.listener = listener;
+  return g;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || (list.listener && list.listener === listener)) {
+        if (--this._eventsCount === 0)
+          this._events = new EventHandlers();
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length; i-- > 0;) {
+          if (list[i] === listener ||
+              (list[i].listener && list[i].listener === listener)) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (list.length === 1) {
+          list[0] = undefined;
+          if (--this._eventsCount === 0) {
+            this._events = new EventHandlers();
+            return this;
+          } else {
+            delete events[type];
+          }
+        } else {
+          spliceOne(list, position);
+        }
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = new EventHandlers();
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = new EventHandlers();
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = Object.keys(events);
+        for (var i = 0, key; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = new EventHandlers();
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        do {
+          this.removeListener(type, listeners[listeners.length - 1]);
+        } while (listeners[0]);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  var evlistener;
+  var ret;
+  var events = this._events;
+
+  if (!events)
+    ret = [];
+  else {
+    evlistener = events[type];
+    if (!evlistener)
+      ret = [];
+    else if (typeof evlistener === 'function')
+      ret = [evlistener.listener || evlistener];
+    else
+      ret = unwrapListeners(evlistener);
+  }
+
+  return ret;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, i) {
+  var copy = new Array(i);
+  while (i--)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+
+var events = Object.freeze({
+	default: EventEmitter,
+	EventEmitter: EventEmitter
+});
+
+var _events = ( events && EventEmitter ) || events;
+
+var MIDIDevice_1 = createCommonjsModule(function (module, exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
-var _CURSOR, _extends$parseMessage$buildLedData;
+class MIDIDevice extends _events.EventEmitter {
+  constructor(deviceName) {
+    super();
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+    this._input = null;
+    this._output = null;
+    this._deviceName = deviceName;
+  }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+  static requestDeviceNames() {
+    return Promise.reject(new Error("subclass responsibility"));
+  }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
+  get deviceName() {
+    return this._deviceName;
+  }
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+  open() {
+    return Promise.reject(new Error("subclass responsibility"));
+  }
 
-var _xtend = require("xtend");
+  close() {
+    return Promise.reject(new Error("subclass responsibility"));
+  }
 
-var _xtend2 = _interopRequireDefault(_xtend);
+  send() {
+    throw new Error("subclass responsibility");
+  }
 
-var PAD = [0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c];
-var KNOB1 = [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c];
-var KNOB2 = [0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30];
-var CURSOR = (_CURSOR = {}, _defineProperty(_CURSOR, 0x72, "up"), _defineProperty(_CURSOR, 0x73, "down"), _defineProperty(_CURSOR, 0x74, "left"), _defineProperty(_CURSOR, 0x75, "right"), _CURSOR);
-var COLOR_NAMES = {
+  _onmidimessage() {}
+}
+exports.default = MIDIDevice;
+});
+
+unwrapExports(MIDIDevice_1);
+
+var WebMIDIDevice_1 = createCommonjsModule(function (module, exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+
+
+var _MIDIDevice2 = _interopRequireDefault(MIDIDevice_1);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function findMIDIPortByName(iter, deviceName) {
+  for (let x = iter.next(); !x.done; x = iter.next()) {
+    if (x.value.name === deviceName) {
+      return x.value;
+    }
+  }
+
+  return null;
+}
+
+function collectDeviceNames(iter) {
+  let result = [];
+
+  for (let x = iter.next(); !x.done; x = iter.next()) {
+    result.push(x.value.name);
+  }
+
+  return result;
+}
+
+class WebMIDIDevice extends _MIDIDevice2.default {
+  static requestDeviceNames() {
+    return new Promise((resolve, reject) => {
+      if (!commonjsGlobal.navigator || typeof commonjsGlobal.navigator.requestMIDIAccess !== "function") {
+        return reject(new TypeError("Web MIDI API is not supported"));
+      }
+
+      return commonjsGlobal.navigator.requestMIDIAccess().then(access => {
+        let inputDeviceNames = collectDeviceNames(access.inputs.values());
+        let outputDeviceNames = collectDeviceNames(access.outputs.values());
+
+        resolve({
+          inputs: inputDeviceNames,
+          outputs: outputDeviceNames
+        });
+      }, reject);
+    });
+  }
+
+  open() {
+    return new Promise((resolve, reject) => {
+      if (!commonjsGlobal.navigator || typeof commonjsGlobal.navigator.requestMIDIAccess !== "function") {
+        return reject(new TypeError("Web MIDI API is not supported"));
+      }
+
+      if (this._input !== null || this._output !== null) {
+        return reject(new TypeError(`${this.deviceName} has already been opened`));
+      }
+
+      let successCallback = access => {
+        this._access = access;
+
+        let input = findMIDIPortByName(access.inputs.values(), this.deviceName);
+        let output = findMIDIPortByName(access.outputs.values(), this.deviceName);
+
+        if (input === null && output === null) {
+          return reject(new TypeError(`${this.deviceName} is not found`));
+        }
+
+        if (input !== null) {
+          this._input = input;
+
+          input.onmidimessage = e => {
+            this._onmidimessage(e);
+          };
+        }
+
+        if (output !== null) {
+          this._output = output;
+        }
+
+        return Promise.all([this._input && this._input.open(), this._output && this._output.open()]).then(resolve, reject);
+      };
+
+      if (this._access) {
+        return successCallback(this._access);
+      }
+
+      return commonjsGlobal.navigator.requestMIDIAccess().then(successCallback, reject);
+    });
+  }
+
+  close() {
+    return new Promise((resolve, reject) => {
+      if (this._input === null && this._output === null) {
+        return reject(new TypeError(`${this.deviceName} has already been closed`));
+      }
+
+      let input = this._input;
+      let output = this._output;
+
+      this._input = null;
+      this._output = null;
+
+      return Promise.all([input && input.close(), output && output.close()]).then(resolve, reject);
+    });
+  }
+
+  send(data) {
+    if (this._output !== null) {
+      this._output.send(data);
+    }
+  }
+}
+exports.default = WebMIDIDevice;
+});
+
+unwrapExports(WebMIDIDevice_1);
+
+var webmidi = WebMIDIDevice_1;
+
+var immutable = extend;
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+function extend() {
+    var target = {};
+
+    for (var i = 0; i < arguments.length; i++) {
+        var source = arguments[i];
+
+        for (var key in source) {
+            if (hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+            }
+        }
+    }
+
+    return target
+}
+
+const PAD = [ 0x09, 0x0a, 0x0b, 0x0c, 0x19, 0x1a, 0x1b, 0x1c ];
+const KNOB1 = [ 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c ];
+const KNOB2 = [ 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30 ];
+const CURSOR = {
+  [0x72]: "up",
+  [0x73]: "down",
+  [0x74]: "left",
+  [0x75]: "right",
+};
+const COLOR_NAMES = {
   off: 0,
   "dark red": 1,
   red: 2,
@@ -37,31 +705,35 @@ var COLOR_NAMES = {
   green: 8,
   amber: 10,
   "light green": 12,
-  "light amber": 15
+  "light amber": 15,
 };
-var TRACK_SELECTOR = {
-  all: function all() {
-    return true;
-  },
-  even: function even(_, i) {
-    return i % 2 === 0;
-  },
-  odd: function odd(_, i) {
-    return i % 2 === 1;
-  }
+const TRACK_SELECTOR = {
+  all: () => true,
+  even: (_, i) => i % 2 === 0,
+  odd: (_, i) => i % 2 === 1,
 };
 
-function parseMessage(st, d1, d2) {
-  var messageType = st & 0xf0;
-  var value = Math.max(0, Math.min(d2, 127));
-  var channel = Math.max(0, Math.min(st & 0x0f, 15));
-  var track = undefined;
+function parseMessage(st, d1, d2, opts) {
+  let messageType = st & 0xf0;
+  let value = Math.max(0, Math.min(d2, 127));
+  let channel = Math.max(0, Math.min(st & 0x0f, 15));
+  let track;
 
-  // note on
-  if (messageType === 0x90 && value !== 0) {
-    track = PAD.indexOf(d1);
-    if (track !== -1) {
-      return { dataType: "pad", track: track, value: value, channel: channel };
+  if (opts && opts.enablePadOff) {
+    // note on up (value=127) or down(value=0)
+    if (messageType === 0x80 || messageType === 0x90) {
+      track = PAD.indexOf(d1);
+      if (track !== -1) {
+        return { dataType: "pad", track, value, channel };
+      }
+    }
+  } else {
+    // note on
+    if (messageType === 0x90 && value !== 0) {
+      track = PAD.indexOf(d1);
+      if (track !== -1) {
+        return { dataType: "pad", track, value, channel };
+      }
     }
   }
 
@@ -69,18 +741,18 @@ function parseMessage(st, d1, d2) {
   if (messageType === 0xb0) {
     track = KNOB1.indexOf(d1);
     if (track !== -1) {
-      return { dataType: "knob1", track: track, value: value, channel: channel };
+      return { dataType: "knob1", track, value, channel };
     }
 
     track = KNOB2.indexOf(d1);
     if (track !== -1) {
-      return { dataType: "knob2", track: track, value: value, channel: channel };
+      return { dataType: "knob2", track, value, channel };
     }
 
-    var cursor = CURSOR[d1];
+    let cursor = CURSOR[d1];
 
     if (cursor && value !== 0) {
-      return { dataType: "cursor", direction: cursor, value: value, channel: channel };
+      return { dataType: "cursor", direction: cursor, value, channel };
     }
   }
 
@@ -91,655 +763,74 @@ function buildLedData(track, color, channel) {
   if (typeof color === "string") {
     color = COLOR_NAMES[color];
   }
-  color = (color | 0) % 16;
+  color = (color|0) % 16;
 
-  var st = 0x90 + (channel | 0) % 16;
-  var d2 = ((color & 0x0c) << 2) + 0x0c + (color & 0x03);
+  let st = 0x90 + ((channel|0) % 16);
+  let d2 = ((color & 0x0c) << 2) + 0x0c + (color & 0x03);
 
   if (TRACK_SELECTOR.hasOwnProperty(track)) {
-    return PAD.filter(TRACK_SELECTOR[track]).map(function (d1) {
-      return [st, d1, d2];
-    });
+    return PAD.filter(TRACK_SELECTOR[track]).map(d1 => [ st, d1, d2 ]);
   }
 
   if (/^[-o]+$/.test(track)) {
-    var data = [];
+    let data = [];
 
-    for (var i = 0; i < 8; i++) {
+    for (let i = 0; i < 8; i++) {
       if (track[i % track.length] === "o") {
-        data.push([st, PAD[i], d2]);
+        data.push([ st, PAD[i], d2 ]);
       }
     }
 
     return data;
   }
 
-  var d1 = PAD[(track | 0) % 8];
+  let d1 = PAD[(track|0) % 8];
 
-  return [[st, d1, d2]];
+  return [ [ st, d1, d2 ] ];
 }
 
 function _extends(MIDIDevice) {
-  return (function (_MIDIDevice) {
-    function LaunchControl() {
-      var _this = this;
+  return class LaunchControl extends MIDIDevice {
+    constructor(deviceName, opts) {
+      if (typeof deviceName === "string") {
+        opts = opts || {};
+      } else if (typeof deviceName === "object") {
+        opts = deviceName;
+        deviceName = "Launch Control";
+      } else {
+        deviceName = "Launch Control";
+        opts = {};
+      }
 
-      var deviceName = arguments[0] === undefined ? "Launch Control" : arguments[0];
-
-      _classCallCheck(this, LaunchControl);
-
-      _get(Object.getPrototypeOf(LaunchControl.prototype), "constructor", this).call(this, deviceName);
+      super(deviceName);
 
       this._channel = 8;
-      this._onmidimessage = function (e) {
-        var msg = parseMessage(e.data[0], e.data[1], e.data[2]);
+      this._onmidimessage = (e) => {
+        let msg = parseMessage(e.data[0], e.data[1], e.data[2], opts);
 
         if (msg === null) {
           return;
         }
 
-        _this._channel = msg.channel;
-        _this.emit("message", (0, _xtend2["default"])({ type: "message", deviceName: _this.deviceName }, msg));
+        this._channel = msg.channel;
+        this.emit("message", immutable({ type: "message", deviceName: this.deviceName }, msg));
       };
     }
 
-    _inherits(LaunchControl, _MIDIDevice);
-
-    _createClass(LaunchControl, [{
-      key: "led",
-      value: function led(track, color) {
-        var _this2 = this;
-
-        var channel = arguments[2] === undefined ? this._channel : arguments[2];
-
-        buildLedData(track, color, channel).forEach(function (data) {
-          _this2.send(data);
-        });
-      }
-    }]);
-
-    return LaunchControl;
-  })(MIDIDevice);
+    led(track, color, channel = this._channel) {
+      buildLedData(track, color, channel).forEach((data) => { this.send(data); });
+    }
+  };
 }
 
-exports["default"] = (_extends$parseMessage$buildLedData = {}, _defineProperty(_extends$parseMessage$buildLedData, "extends", _extends), _defineProperty(_extends$parseMessage$buildLedData, "parseMessage", parseMessage), _defineProperty(_extends$parseMessage$buildLedData, "buildLedData", buildLedData), _extends$parseMessage$buildLedData);
-module.exports = exports["default"];
-},{"xtend":8}],2:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var _mohayonaoMidiDeviceWebmidi = require("@mohayonao/midi-device/webmidi");
-
-var _mohayonaoMidiDeviceWebmidi2 = _interopRequireDefault(_mohayonaoMidiDeviceWebmidi);
-
-var _LaunchControl = require("./LaunchControl");
-
-var _LaunchControl2 = _interopRequireDefault(_LaunchControl);
-
-exports["default"] = _LaunchControl2["default"]["extends"](_mohayonaoMidiDeviceWebmidi2["default"]);
-module.exports = exports["default"];
-},{"./LaunchControl":1,"@mohayonao/midi-device/webmidi":6}],3:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _events = require("events");
-
-exports["default"] = _events.EventEmitter;
-module.exports = exports["default"];
-},{"events":7}],4:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
-
-var _EventEmitter2 = require("./EventEmitter");
-
-var _EventEmitter3 = _interopRequireDefault(_EventEmitter2);
-
-var MIDIDevice = (function (_EventEmitter) {
-  function MIDIDevice(deviceName) {
-    _classCallCheck(this, MIDIDevice);
-
-    _get(Object.getPrototypeOf(MIDIDevice.prototype), "constructor", this).call(this);
-
-    this._input = null;
-    this._output = null;
-    this._deviceName = deviceName;
-  }
-
-  _inherits(MIDIDevice, _EventEmitter);
-
-  _createClass(MIDIDevice, [{
-    key: "open",
-    value: function open() {
-      return Promise.reject(new Error("subclass responsibility"));
-    }
-  }, {
-    key: "close",
-    value: function close() {
-      return Promise.reject(new Error("subclass responsibility"));
-    }
-  }, {
-    key: "send",
-    value: function send() {
-      throw new Error("subclass responsibility");
-    }
-  }, {
-    key: "_onmidimessage",
-    value: function _onmidimessage() {}
-  }, {
-    key: "deviceName",
-    get: function get() {
-      return this._deviceName;
-    }
-  }], [{
-    key: "requestDeviceNames",
-    value: function requestDeviceNames() {
-      return Promise.reject(new Error("subclass responsibility"));
-    }
-  }]);
-
-  return MIDIDevice;
-})(_EventEmitter3["default"]);
-
-exports["default"] = MIDIDevice;
-module.exports = exports["default"];
-},{"./EventEmitter":3}],5:[function(require,module,exports){
-(function (global){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) subClass.__proto__ = superClass; }
-
-var _MIDIDevice2 = require("./MIDIDevice");
-
-var _MIDIDevice3 = _interopRequireDefault(_MIDIDevice2);
-
-function findMIDIPortByName(iter, deviceName) {
-  for (var x = iter.next(); !x.done; x = iter.next()) {
-    if (x.value.name === deviceName) {
-      return x.value;
-    }
-  }
-
-  return null;
-}
-
-function collectDeviceNames(iter) {
-  var result = [];
-
-  for (var x = iter.next(); !x.done; x = iter.next()) {
-    result.push(x.value.name);
-  }
-
-  return result;
-}
-
-var WebMIDIDevice = (function (_MIDIDevice) {
-  function WebMIDIDevice() {
-    _classCallCheck(this, WebMIDIDevice);
-
-    _get(Object.getPrototypeOf(WebMIDIDevice.prototype), "constructor", this).apply(this, arguments);
-  }
-
-  _inherits(WebMIDIDevice, _MIDIDevice);
-
-  _createClass(WebMIDIDevice, [{
-    key: "open",
-    value: function open() {
-      var _this = this;
-
-      return new Promise(function (resolve, reject) {
-        if (!global.navigator || typeof global.navigator.requestMIDIAccess !== "function") {
-          return reject(new TypeError("Web MIDI API is not supported"));
-        }
-
-        if (_this._input !== null || _this._output !== null) {
-          return reject(new TypeError(_this.deviceName + " has already been opened"));
-        }
-
-        var successCallback = function successCallback(access) {
-          _this._access = access;
-
-          var input = findMIDIPortByName(access.inputs.values(), _this.deviceName);
-          var output = findMIDIPortByName(access.outputs.values(), _this.deviceName);
-
-          if (input === null && output === null) {
-            return reject(new TypeError(_this.deviceName + " is not found"));
-          }
-
-          if (input !== null) {
-            _this._input = input;
-
-            input.onmidimessage = function (e) {
-              _this._onmidimessage(e);
-            };
-          }
-
-          if (output !== null) {
-            _this._output = output;
-          }
-
-          return Promise.all([_this._input && _this._input.open(), _this._output && _this._output.open()]).then(resolve, reject);
-        };
-
-        if (_this._access) {
-          return successCallback(_this._access);
-        }
-
-        return global.navigator.requestMIDIAccess().then(successCallback, reject);
-      });
-    }
-  }, {
-    key: "close",
-    value: function close() {
-      var _this2 = this;
-
-      return new Promise(function (resolve, reject) {
-        if (_this2._input === null && _this2._output === null) {
-          return reject(new TypeError(_this2.deviceName + " has already been closed"));
-        }
-
-        var input = _this2._input;
-        var output = _this2._output;
-
-        _this2._input = null;
-        _this2._output = null;
-
-        return Promise.all([input && input.close(), output && output.close()]).then(resolve, reject);
-      });
-    }
-  }, {
-    key: "send",
-    value: function send(data) {
-      if (this._output !== null) {
-        this._output.send(data);
-      }
-    }
-  }], [{
-    key: "requestDeviceNames",
-    value: function requestDeviceNames() {
-      return new Promise(function (resolve, reject) {
-        if (!global.navigator || typeof global.navigator.requestMIDIAccess !== "function") {
-          return reject(new TypeError("Web MIDI API is not supported"));
-        }
-
-        return global.navigator.requestMIDIAccess().then(function (access) {
-          var inputDeviceNames = collectDeviceNames(access.inputs.values());
-          var outputDeviceNames = collectDeviceNames(access.outputs.values());
-
-          resolve({
-            inputs: inputDeviceNames,
-            outputs: outputDeviceNames
-          });
-        }, reject);
-      });
-    }
-  }]);
-
-  return WebMIDIDevice;
-})(_MIDIDevice3["default"]);
-
-exports["default"] = WebMIDIDevice;
-module.exports = exports["default"];
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./MIDIDevice":4}],6:[function(require,module,exports){
-module.exports = require("./lib/WebMIDIDevice");
-
-},{"./lib/WebMIDIDevice":5}],7:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-function EventEmitter() {
-  this._events = this._events || {};
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-EventEmitter.defaultMaxListeners = 10;
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!isNumber(n) || n < 0 || isNaN(n))
-    throw TypeError('n must be a positive number');
-  this._maxListeners = n;
-  return this;
+var LaunchControl = {
+  ["extends"]: _extends,
+  parseMessage,
+  buildLedData,
 };
 
-EventEmitter.prototype.emit = function(type) {
-  var er, handler, len, args, i, listeners;
+var WebMIDILaunchControl = LaunchControl.extends(webmidi);
 
-  if (!this._events)
-    this._events = {};
+return WebMIDILaunchControl;
 
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
-      er = arguments[1];
-      if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
-      }
-      throw TypeError('Uncaught, unspecified "error" event.');
-    }
-  }
-
-  handler = this._events[type];
-
-  if (isUndefined(handler))
-    return false;
-
-  if (isFunction(handler)) {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        len = arguments.length;
-        args = new Array(len - 1);
-        for (i = 1; i < len; i++)
-          args[i - 1] = arguments[i];
-        handler.apply(this, args);
-    }
-  } else if (isObject(handler)) {
-    len = arguments.length;
-    args = new Array(len - 1);
-    for (i = 1; i < len; i++)
-      args[i - 1] = arguments[i];
-
-    listeners = handler.slice();
-    len = listeners.length;
-    for (i = 0; i < len; i++)
-      listeners[i].apply(this, args);
-  }
-
-  return true;
-};
-
-EventEmitter.prototype.addListener = function(type, listener) {
-  var m;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events)
-    this._events = {};
-
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
-    this.emit('newListener', type,
-              isFunction(listener.listener) ?
-              listener.listener : listener);
-
-  if (!this._events[type])
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  else
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-
-  // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
-    var m;
-    if (!isUndefined(this._maxListeners)) {
-      m = this._maxListeners;
-    } else {
-      m = EventEmitter.defaultMaxListeners;
-    }
-
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
-      console.error('(node) warning: possible EventEmitter memory ' +
-                    'leak detected. %d listeners added. ' +
-                    'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
-      if (typeof console.trace === 'function') {
-        // not supported in IE 10
-        console.trace();
-      }
-    }
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  var fired = false;
-
-  function g() {
-    this.removeListener(type, g);
-
-    if (!fired) {
-      fired = true;
-      listener.apply(this, arguments);
-    }
-  }
-
-  g.listener = listener;
-  this.on(type, g);
-
-  return this;
-};
-
-// emits a 'removeListener' event iff the listener was removed
-EventEmitter.prototype.removeListener = function(type, listener) {
-  var list, position, length, i;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events || !this._events[type])
-    return this;
-
-  list = this._events[type];
-  length = list.length;
-  position = -1;
-
-  if (list === listener ||
-      (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-
-  } else if (isObject(list)) {
-    for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0)
-      return this;
-
-    if (list.length === 1) {
-      list.length = 0;
-      delete this._events[type];
-    } else {
-      list.splice(position, 1);
-    }
-
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  var key, listeners;
-
-  if (!this._events)
-    return this;
-
-  // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
-    if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
-    return this;
-  }
-
-  // emit removeListener for all listeners on all events
-  if (arguments.length === 0) {
-    for (key in this._events) {
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-    this.removeAllListeners('removeListener');
-    this._events = {};
-    return this;
-  }
-
-  listeners = this._events[type];
-
-  if (isFunction(listeners)) {
-    this.removeListener(type, listeners);
-  } else {
-    // LIFO order
-    while (listeners.length)
-      this.removeListener(type, listeners[listeners.length - 1]);
-  }
-  delete this._events[type];
-
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  var ret;
-  if (!this._events || !this._events[type])
-    ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
-  else
-    ret = this._events[type].slice();
-  return ret;
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  var ret;
-  if (!emitter._events || !emitter._events[type])
-    ret = 0;
-  else if (isFunction(emitter._events[type]))
-    ret = 1;
-  else
-    ret = emitter._events[type].length;
-  return ret;
-};
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-
-},{}],8:[function(require,module,exports){
-module.exports = extend
-
-function extend() {
-    var target = {}
-
-    for (var i = 0; i < arguments.length; i++) {
-        var source = arguments[i]
-
-        for (var key in source) {
-            if (source.hasOwnProperty(key)) {
-                target[key] = source[key]
-            }
-        }
-    }
-
-    return target
-}
-
-},{}],9:[function(require,module,exports){
-module.exports = require("./lib/WebMIDILaunchControl");
-
-},{"./lib/WebMIDILaunchControl":2}]},{},[9])(9)
-});
+})));
